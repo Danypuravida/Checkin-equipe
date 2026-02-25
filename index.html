@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Check-in Equipe</title>
+</head>
+<body>
+<h2>Check-in</h2>
+
+<input type="text" id="nome" placeholder="Seu nome" required>
+<br><br>
+<input type="file" id="foto">
+<br><br>
+
+<button onclick="checkin()">Fazer Check-in</button>
+
+<p id="status"></p>
+
+<script>
+const estadioLat = -22.89520;  // COLOQUE AQUI LATITUDE REAL
+const estadioLon = -43.29314;  // COLOQUE AQUI LONGITUDE REAL
+const raio = 100; // metros
+
+function calcularDistancia(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const dLat = (lat2-lat1) * Math.PI/180;
+  const dLon = (lon2-lon1) * Math.PI/180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+function checkin() {
+  const nome = document.getElementById("nome").value;
+  if (!nome) {
+    alert("Nome é obrigatório.");
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(function(position) {
+    const lat = position.coords.latitude;
+    const lon = position.coords.longitude;
+    const distancia = calcularDistancia(lat, lon, estadioLat, estadioLon);
+
+    if (distancia > raio) {
+      document.getElementById("status").innerText =
+        "Você está fora do raio permitido.";
+      return;
+    }
+
+    fetch("https://script.google.com/macros/s/AKfycbwJUT41-0Sq3T_pRImLMtXK87skbOaUyoce8Tk_nTCFNcEtz4x-fQhoSd7VJO5n21Op/exec", {
+      method: "POST",
+      body: JSON.stringify({
+        nome: nome,
+        latitude: lat,
+        longitude: lon,
+        distancia: distancia
+      })
+    });
+
+    document.getElementById("status").innerText =
+      "Check-in realizado com sucesso!";
+      
+  }, function() {
+    alert("Permita o acesso à localização.");
+  });
+}
+</script>
+
+</body>
+</html>
