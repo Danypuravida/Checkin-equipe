@@ -139,17 +139,15 @@ async function checkin() {
 
       try {
         const res = await fetch(APPS_SCRIPT_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            nome: nome,
-            cpf: cpf,
-            latitude: lat,
-            longitude: lon,
-            distancia: Math.round(distancia)
-          })
-        });
-
+  method: "POST",
+  body: JSON.stringify({
+    nome: nome,
+    cpf: cpf,
+    latitude: lat,
+    longitude: lon,
+    distancia: Math.round(distancia)
+  })
+});
         const text = await res.text();
 
         if (text === "DUPLICADO_DIA") {
