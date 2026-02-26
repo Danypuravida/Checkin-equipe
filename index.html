@@ -1,13 +1,22 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="UTF-8">
 <title>Check-in Equipe</title>
+<style>
+body { font-family: Arial; padding: 30px; text-align: center; }
+input, button { padding: 10px; width: 250px; }
+button { cursor: pointer; }
+#status { margin-top: 20px; font-weight: bold; }
+</style>
 </head>
 <body>
+
 <h2>Check-in</h2>
 
-<input type="text" id="nome" placeholder="Nome Completo" required>
+<input type="text" id="nome" placeholder="Nome completo" required>
 <br><br>
+
 <input type="text" id="cpf" placeholder="CPF (somente números)" inputmode="numeric" required>
 <br><br>
 
@@ -16,19 +25,23 @@
 <p id="status"></p>
 
 <script>
-const estadioLat = -22.89520;  // COLOQUE AQUI LATITUDE REAL
-const estadioLon = -43.29314;  // COLOQUE AQUI LONGITUDE REAL
+
+// =====================
+// 🔴 PREENCHA AQUI
+// =====================
+
+const estadioLat = -22.89520;   // COLOQUE A LATITUDE REAL
+const estadioLon = -43.29314;   // COLOQUE A LONGITUDE REAL
 const raio = 500; // metros
 
-function calcularDistancia(lat1, lon1, lat2, lon2) {
-  const R = 6371000;
-  const dLat = (lat2-lat1) * Math.PI/180;
-  const dLon = (lon2-lon1) * Math.PI/180;
-  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) *
-            Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwJUT41-0Sq3T_pRImLMtXK87skbOaUyoce8Tk_nTCFNcEtz4x-fQhoSd7VJO5n21Op/exec";
+
+// =====================
+
+let enviando = false;
+
+function setStatus(msg) {
+  document.getElementById("status").innerText = msg;
 }
 
 function normalizarCpf(v) {
@@ -59,10 +72,21 @@ function cpfValido(cpf) {
   return true;
 }
 
+function calcularDistancia(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const dLat = (lat2-lat1) * Math.PI/180;
+  const dLon = (lon2-lon1) * Math.PI/180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
 async function checkin() {
+
   if (enviando) return;
 
-  const statusEl = document.getElementById("status");
   const btn = document.getElementById("btnCheckin");
   const nomeEl = document.getElementById("nome");
   const cpfEl = document.getElementById("cpf");
@@ -80,61 +104,80 @@ async function checkin() {
     return;
   }
 
+  if (APPS_SCRIPT_URL.includes("COLE_AQUI")) {
+    alert("Você ainda não colou a URL do Apps Script.");
+    return;
+  }
+
   enviando = true;
   btn.disabled = true;
-  statusEl.innerText = "Validando localização...";
+  setStatus("Validando localização...");
 
-  navigator.geolocation.getCurrentPosition(async (position) => {
-    const lat = position.coords.latitude;
-    const lon = position.coords.longitude;
-    const distancia = calcularDistancia(lat, lon, estadioLat, estadioLon);
-
-    if (distancia > raio) {
-      statusEl.innerText = "Fora do raio permitido (100m).";
-      btn.disabled = false;
-      enviando = false;
-      return;
-    }
-
-    statusEl.innerText = "Enviando...";
-
-    try {
-      const res = await fetch("https://script.google.com/macros/s/AKfycbwJUT41-0Sq3T_pRImLMtXK87skbOaUyoce8Tk_nTCFNcEtz4x-fQhoSd7VJO5n21Op/exec", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nome,
-          cpf,
-          latitude: lat,
-          longitude: lon,
-          distancia: Math.round(distancia)
-        })
-      });
-
-      const text = await res.text();
-
-      if (text === "DUPLICADO_DIA") {
-        statusEl.innerText = "CPF já registrou presença hoje.";
-      } else {
-        statusEl.innerText = "Check-in realizado com sucesso!";
-      }
-
-      btn.disabled = true;
-      nomeEl.disabled = true;
-      cpfEl.disabled = true;
-
-    } catch (e) {
-      statusEl.innerText = "Erro no envio.";
-      btn.disabled = false;
-      enviando = false;
-    }
-
-  }, () => {
-    alert("Permita a localização.");
+  if (!navigator.geolocation) {
+    setStatus("Geolocalização não suportada.");
     btn.disabled = false;
     enviando = false;
-  }, { enableHighAccuracy: true });
+    return;
+  }
 
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+
+      const distancia = calcularDistancia(lat, lon, estadioLat, estadioLon);
+
+      if (distancia > raio) {
+        setStatus("Fora do raio permitido (100m). Check-in bloqueado.");
+        btn.disabled = false;
+        enviando = false;
+        return;
+      }
+
+      setStatus("Enviando check-in...");
+
+      try {
+        const res = await fetch(APPS_SCRIPT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nome: nome,
+            cpf: cpf,
+            latitude: lat,
+            longitude: lon,
+            distancia: Math.round(distancia)
+          })
+        });
+
+        const text = await res.text();
+
+        if (text === "DUPLICADO_DIA") {
+          setStatus("✅ CPF já registrou presença hoje.");
+        } else if (text === "OK") {
+          setStatus("✅ Check-in realizado com sucesso!");
+        } else {
+          setStatus("Resposta do servidor: " + text);
+        }
+
+        nomeEl.disabled = true;
+        cpfEl.disabled = true;
+        btn.disabled = true;
+
+      } catch (err) {
+        setStatus("Erro no envio. Verifique a internet.");
+        btn.disabled = false;
+        enviando = false;
+      }
+
+    },
+    (error) => {
+      setStatus("Erro de localização: " + error.message);
+      btn.disabled = false;
+      enviando = false;
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+  );
 }
 
 </script>
