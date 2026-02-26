@@ -128,6 +128,8 @@ async function checkin() {
 
       const distancia = calcularDistancia(lat, lon, estadioLat, estadioLon);
 
+      setStatus("Distância do ponto: " + Math.round(distancia) + "m");
+
       if (distancia > raio) {
         setStatus("Fora do raio permitido (100m). Check-in bloqueado.");
         btn.disabled = false;
