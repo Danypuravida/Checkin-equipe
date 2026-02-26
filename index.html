@@ -131,7 +131,7 @@ async function checkin() {
       setStatus("Distância do ponto: " + Math.round(distancia) + "m");
 
       if (distancia > raio) {
-        setStatus("Fora do raio permitido (100m). Check-in bloqueado.");
+        setStatus("Fora do raio permitido (500m). Check-in bloqueado.");
         btn.disabled = false;
         enviando = false;
         return;
